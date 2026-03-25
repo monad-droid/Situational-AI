@@ -6,6 +6,19 @@ dist/
 build/
 .venv/
 venv/
-data/*.db
-data/exports/
 .ruff_cache/
+keys/
+*.p8
+*.p12
+
+# iOS
+ios/*.xcodeproj/xcuserdata/
+ios/*.xcodeproj/project.xcworkspace/xcuserdata/
+ios/**/*.xcuserstate
+DerivedData/
+*.ipa
+*.dSYM.zip
+*.dSYM
+
+# DB
+*.db

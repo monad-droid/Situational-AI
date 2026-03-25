@@ -1,127 +1,147 @@
 # Situational AI
 
-**A health coach that only activates when you need it — and doesn't leave you alone until you hit your goal.**
+**A threshold-triggered health coach that won't leave you alone until you hit your goal.**
 
-Set a threshold (e.g., body weight > 170 lbs). Cross it, and an AI coach wakes up and starts messaging you with real, actionable coaching. It won't stop until you're back on track.
+Native iOS app + FastAPI backend. Set a body weight threshold, and when you cross it, an AI coach activates via push notifications. It doesn't stop until you're back under. This is not a passive health tracker — it's designed to be annoying on purpose.
 
-## Zero Server Costs
-
-This runs **100% on your machine** using **your own API key**. No servers, no subscriptions, no middleman. You bring your own AI credits (Anthropic or OpenAI) and everything stays local.
-
-## How It Works
-
-1. **Set a threshold** — "If my weight goes above 170 lbs, activate the coach"
-2. **Log your data** — Import from Apple Health or log manually
-3. **Cross the line** — The AI coach wakes up and starts coaching you
-4. **Get nagged** — The coach checks in on a schedule, gives actionable advice, and won't leave you alone
-5. **Hit your goal** — The coach celebrates and goes back to sleep
-
-## Quick Start
-
-```bash
-# 1. Clone and install
-git clone https://github.com/monad-droid/situational-ai.git
-cd situational-ai
-pip install -e .
-
-# 2. Set up your API key (you only need ONE)
-cp .env.example .env
-# Edit .env and add your Anthropic or OpenAI key
-
-# 3. Log your weight
-situational-ai log body_mass 172 --unit lb
-
-# 4. The coach activates immediately if you're over threshold!
-# Or start the daemon to monitor continuously:
-situational-ai start
-```
-
-## Commands
-
-| Command | Description |
-|---------|-------------|
-| `situational-ai start` | Start the coach daemon (monitors + nags on schedule) |
-| `situational-ai log <metric> <value>` | Log a health metric manually |
-| `situational-ai import-health <file>` | Import Apple Health XML export |
-| `situational-ai status` | Show all thresholds and their current state |
-| `situational-ai chat` | Chat with an active coach interactively |
-| `situational-ai history <metric>` | Show recent history for a metric |
-| `situational-ai add-threshold` | Add a new threshold |
-
-## Apple Health Import
-
-Export your data from the Apple Health app:
-1. Open Health app on iPhone
-2. Tap your profile picture
-3. Tap "Export All Health Data"
-4. Transfer the `export.xml` file to your machine
-5. Run: `situational-ai import-health /path/to/export.xml`
-
-Supported metrics: body weight, heart rate, steps, blood pressure, body fat %, calories, blood glucose.
-
-## Configuration
-
-**Thresholds** are stored in `data/config.json`. You can edit directly or use the CLI:
-
-```bash
-# Add a threshold: activate coach if weight goes above 170 lb, goal is 165 lb
-situational-ai add-threshold \
-  --id weight_upper \
-  --metric body_mass \
-  --direction above \
-  --value 170 \
-  --goal 165 \
-  --unit lb
-```
-
-**Environment variables** (in `.env`):
-
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `ANTHROPIC_API_KEY` | — | Your Anthropic API key |
-| `OPENAI_API_KEY` | — | Your OpenAI API key |
-| `CHECK_INTERVAL_MINUTES` | 60 | How often the daemon checks thresholds |
-| `COACH_INTENSITY` | 7 | How aggressive the coach is (1-10) |
-
-## Coach Intensity Scale
-
-| Level | Style |
-|-------|-------|
-| 1-2 | Gentle, encouraging |
-| 3-4 | Friendly but firm |
-| 5-6 | Direct, no-nonsense |
-| 7-8 | Relentless, drill sergeant energy |
-| 9-10 | Maximum accountability — will not let you breathe |
+**CMD Loop Holdings LLC** — Subscription: $6.99/month
 
 ## Architecture
 
 ```
-Your Machine (zero server costs)
-├── CLI Interface (click + rich)
-├── Health Data Layer
-│   ├── Apple Health XML parser
-│   ├── Manual entry
-│   └── SQLite storage (local)
-├── Threshold Engine
-│   ├── Evaluates metrics vs thresholds
-│   └── Tracks activation state
-├── AI Coach
-│   ├── Uses YOUR Anthropic/OpenAI key
-│   ├── Context-aware (knows your data + trends)
-│   └── Persistent conversation history
-└── Notification System
-    ├── Terminal (rich panels)
-    ├── System notifications (macOS/Linux)
-    └── Sound alerts
+iOS App (Swift/SwiftUI)                    Backend (FastAPI)
+┌──────────────────────┐                   ┌─────────────────────────────┐
+│ HealthKit Manager    │                   │ Sample Ingestion + Dedup    │
+│  └ HKObserverQuery   │──POST /samples──▶│ Threshold Engine (no LLM)   │
+│  └ HKAnchoredObject  │                   │ Quiet Hours Enforcement     │
+│                      │                   │ Nudge Rate Limiter          │
+│ Dashboard View       │                   │                             │
+│ Coach Chat View      │──POST /chat─────▶│ Coaching Provider Layer     │
+│ Settings View        │                   │  ├ GPT-5 Mini (nudges)     │
+│                      │                   │  └ Claude Haiku 4.5 (chat) │
+│ Push Notification    │◀──APNs──────────│ Push Service (APNs)         │
+│ Sign in with Apple   │──POST /auth────▶│ Auth + Subscriptions        │
+└──────────────────────┘                   └─────────────────────────────┘
 ```
 
-## Why Local?
+## AI Model Strategy
 
-- **Your data stays on your machine** — health data never leaves your computer
-- **Your API key, your costs** — pay only for the AI calls you make
-- **No accounts, no servers** — clone, configure, run
-- **Full control** — customize thresholds, coach persona, intensity, everything
+| Task | Model | Why |
+|------|-------|-----|
+| Threshold evaluation | Deterministic code | It's an `if` statement. No LLM needed. |
+| Push notification nudges | GPT-5 Mini | Cheap, good at conversational text. 2-3 sentences. |
+| Deep coaching chat | Claude Haiku 4.5 | Higher quality reasoning, less sycophantic. |
 
-## License
+**Cost per heavy user**: ~$1.46/month (10 nudges/day + 10 chat messages/day). At $6.99/month = 79% gross margin.
 
-MIT
+## v0.1 Scope
+
+- [x] iOS app with Sign in with Apple
+- [x] One metric: body weight (hardcoded)
+- [x] One threshold per user
+- [x] HealthKit integration (HKObserverQuery + HKAnchoredObjectQuery)
+- [x] Push notification nudges (GPT-5 Mini)
+- [x] Coaching chat with 10 messages/day cap (Claude Haiku 4.5)
+- [x] Quiet hours with timezone support
+- [x] Sample deduplication + nudge idempotency
+- [x] Paid tier only
+
+## Project Structure
+
+```
+backend/
+├── app/
+│   ├── main.py              # FastAPI app entry point
+│   ├── config.py            # Environment config
+│   ├── database.py          # Async SQLAlchemy setup
+│   ├── models/
+│   │   ├── user.py          # User, subscription tier, push token
+│   │   ├── threshold.py     # Threshold definitions
+│   │   ├── metric_log.py    # HealthKit samples (deduplicated)
+│   │   ├── coaching_message.py  # Nudges + queued messages
+│   │   └── chat_session.py  # Chat conversations
+│   ├── services/
+│   │   ├── system_prompt.py      # Cacheable coaching prompt
+│   │   ├── threshold_engine.py   # Deterministic evaluation
+│   │   ├── coaching_provider.py  # GPT-5 Mini + Claude Haiku 4.5
+│   │   ├── nudge_service.py      # Full nudge pipeline orchestration
+│   │   ├── quiet_hours.py        # Timezone-aware quiet hours
+│   │   └── push_service.py       # APNs integration
+│   └── routers/
+│       ├── auth.py           # Sign in with Apple
+│       ├── samples.py        # POST /api/samples
+│       ├── thresholds.py     # CRUD thresholds
+│       ├── chat.py           # POST /api/chat
+│       └── subscriptions.py  # StoreKit validation + settings
+
+ios/SituationalAI/
+├── App/
+│   └── SituationalAIApp.swift    # App entry + push notification setup
+├── Views/
+│   ├── OnboardingView.swift      # Sign in with Apple
+│   ├── MainTabView.swift         # Tab navigation
+│   ├── DashboardView.swift       # Weight display + threshold setup
+│   ├── CoachChatView.swift       # Chat with coach (Claude Haiku 4.5)
+│   └── SettingsView.swift        # Quiet hours, HealthKit, account
+├── Models/
+│   └── AppModels.swift           # API request/response types
+├── Services/
+│   ├── APIClient.swift           # Backend HTTP client
+│   └── AuthManager.swift         # Sign in with Apple state
+└── HealthKit/
+    └── HealthKitManager.swift    # HKObserver + HKAnchoredObject queries
+```
+
+## Backend Setup
+
+```bash
+# 1. Install dependencies
+pip install -e .
+
+# 2. Configure
+cp .env.example .env
+# Edit .env with your API keys, database URL, APNs credentials
+
+# 3. Run
+uvicorn backend.app.main:app --reload
+```
+
+### Required Environment Variables
+
+- `DATABASE_URL` — PostgreSQL connection string
+- `OPENAI_API_KEY` — For GPT-5 Mini nudges
+- `ANTHROPIC_API_KEY` — For Claude Haiku 4.5 chat
+- `APNS_KEY_PATH`, `APNS_KEY_ID`, `APNS_TEAM_ID` — Apple Push Notification credentials
+- `SECRET_KEY` — JWT signing key
+
+## API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/api/auth/apple` | POST | Sign in with Apple token exchange |
+| `/api/samples` | POST | Receive HealthKit samples, evaluate thresholds, trigger nudges |
+| `/api/thresholds` | GET/POST | CRUD for threshold configuration |
+| `/api/chat` | POST | Coaching chat (Claude Haiku 4.5, 10 msg/day limit) |
+| `/api/subscription/verify` | POST | App Store Server API validation |
+| `/api/push-token` | POST | Update APNs device token |
+| `/api/user/settings` | POST | Update timezone + quiet hours |
+| `/health` | GET | Health check |
+
+## Key Design Decisions
+
+1. **Threshold evaluation is deterministic** — no LLM. It's an `if` statement. The backend is the single source of truth.
+2. **System prompt is a cacheable prefix** — user context is injected separately to maximize prompt cache hits.
+3. **Quiet hours are mandatory** — a 2 AM push notification will cause users to disable notifications permanently.
+4. **Nudge idempotency** — `last_nudge_at` per threshold + min interval prevents duplicate coaching from batched HealthKit deliveries.
+5. **APNs collapse-id** — per threshold, so multiple deliveries collapse into one notification.
+6. **Queued messages have no content** — generated fresh at delivery time with current context (not stale data from hours ago).
+7. **Provider abstraction** — each provider implements its own caching. OpenAI and Anthropic caching work differently.
+
+## v0.2 Roadmap
+
+- Multiple metrics (steps, heart rate, blood pressure)
+- Unlimited thresholds (paid tier)
+- Custom coach personas
+- Free tier (1 threshold, nudges only, no chat)
+- App Store Server Notifications V2 webhook
+- Annual subscription discount
