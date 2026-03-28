@@ -86,6 +86,29 @@ struct ChatRequestBody: Codable {
     }
 }
 
+struct CoachPersona: Codable, Identifiable {
+    let id: String
+    let name: String
+    let description: String
+    let preview: String
+}
+
+struct CoachPersonasResponse: Codable {
+    let personas: [CoachPersona]
+}
+
+struct UserSettingsBody: Codable {
+    let coachPersona: String?
+    let timezone: String?
+    let quietHours: String?
+
+    enum CodingKeys: String, CodingKey {
+        case coachPersona = "coach_persona"
+        case timezone
+        case quietHours = "quiet_hours"
+    }
+}
+
 struct ChatResponseModel: Codable {
     let response: String
     let sessionId: String

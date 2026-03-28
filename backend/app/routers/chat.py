@@ -112,6 +112,8 @@ async def coaching_chat(
             days_count = await get_days_over_threshold(threshold, db)
             trend = await get_trend_summary(threshold, db)
             history = await get_recent_history(threshold, db)
+            from backend.app.routers.subscriptions import COACH_PERSONAS
+            persona_text = COACH_PERSONAS.get(user.coach_persona or "", user.coach_persona or "")
             user_context = build_user_context(
                 current_value=current_value,
                 unit=threshold.unit,
@@ -120,7 +122,7 @@ async def coaching_chat(
                 days_count=days_count,
                 trend_summary=trend,
                 recent_history=history,
-                persona_override=user.coach_persona or "",
+                persona_override=persona_text,
             )
 
     # Load conversation history for this session

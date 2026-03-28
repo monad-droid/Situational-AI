@@ -70,18 +70,48 @@ async def update_push_token(
     return {"status": "ok"}
 
 
+class UserSettingsRequest(BaseModel):
+    timezone: str | None = None
+    quiet_hours: str | None = None
+    coach_persona: str | None = None
+
+
 @router.post("/user/settings")
 async def update_user_settings(
-    timezone: str | None = None,
-    quiet_hours: str | None = None,
+    request: UserSettingsRequest,
     authorization: str = Header(""),
     db: AsyncSession = Depends(get_db),
 ):
-    """Update user timezone and quiet hours."""
+    """Update user settings."""
     user = await get_current_user(authorization, db)
-    if timezone is not None:
-        user.timezone = timezone
-    if quiet_hours is not None:
-        user.quiet_hours = quiet_hours
+    if request.timezone is not None:
+        user.timezone = request.timezone
+    if request.quiet_hours is not None:
+        user.quiet_hours = request.quiet_hours
+    if request.coach_persona is not None:
+        user.coach_persona = request.coach_persona
     await db.commit()
     return {"status": "ok"}
+
+
+COACH_PERSONAS = {
+    "tough_love": "You are a tough-love coach. Direct, no-nonsense, but you genuinely care. You don't sugarcoat anything. You tell it like it is and expect results, not excuses.",
+    "drill_sergeant": "You are a drill sergeant coach. You bark orders. You do NOT accept excuses. You are loud, intense, and in-your-face. Every message feels like you're standing over them screaming. You use military metaphors. 'Drop and give me 20' energy. But underneath the intensity, you believe in them — you just show it by pushing harder.",
+    "brutal_honesty": "You are brutally, savagely honest. You roast the user. You call them out with zero filter. You use harsh language, profanity, and dark humor. You might call them lazy, soft, or worse. You are the friend who tells you that you look terrible and means it. You are NOT mean-spirited — you're the wake-up call they asked for. They signed up for this. Make them uncomfortable enough to change. Swear freely. No corporate politeness.",
+    "supportive": "You are a warm, supportive coach. You focus on positive reinforcement and small wins. You acknowledge struggles empathetically but always redirect toward action. You celebrate progress genuinely. Think encouraging best friend who also happens to be a personal trainer.",
+    "stoic": "You are a stoic philosopher coach. You reference Marcus Aurelius, Epictetus, and Seneca. You frame health as discipline, not motivation. You speak in calm, measured tones about duty to oneself. You remind them that suffering is optional but discipline is required. Brief, powerful, philosophical.",
+}
+
+
+@router.get("/coach-personas")
+async def list_personas():
+    """Return available coach personas."""
+    return {
+        "personas": [
+            {"id": "tough_love", "name": "Tough Love", "description": "Direct and no-nonsense. Tells it like it is.", "preview": "You've been over your threshold for a week. Stop making excuses and start making changes. Today."},
+            {"id": "drill_sergeant", "name": "Drill Sergeant", "description": "Military intensity. In your face. No excuses accepted.", "preview": "ON YOUR FEET, SOLDIER. You think that scale is going to move itself? Get your ass to the gym NOW."},
+            {"id": "brutal_honesty", "name": "Brutal Honesty", "description": "Zero filter. Roasts you. Uses profanity. The wake-up call you asked for.", "preview": "172 lbs? Again? Bro you said 'starting Monday' three Mondays ago. Put the fork down."},
+            {"id": "supportive", "name": "Supportive", "description": "Warm and encouraging. Focuses on small wins.", "preview": "I see you're a bit over your threshold. That's okay — let's focus on one small change today."},
+            {"id": "stoic", "name": "Stoic Philosopher", "description": "Calm wisdom. Discipline over motivation.", "preview": "The body achieves what the mind believes. Your threshold is not a suggestion — it is a commitment you made to yourself."},
+        ]
+    }

@@ -57,6 +57,9 @@ async def process_threshold_check(user: User, threshold: Threshold, db: AsyncSes
     from backend.app.services.threshold_engine import get_latest_value
     current_value = await get_latest_value(user.id, threshold.metric_type, db)
 
+    from backend.app.routers.subscriptions import COACH_PERSONAS
+    persona_text = COACH_PERSONAS.get(user.coach_persona or "", user.coach_persona or "")
+
     user_context = build_user_context(
         current_value=current_value,
         unit=threshold.unit,
@@ -65,7 +68,7 @@ async def process_threshold_check(user: User, threshold: Threshold, db: AsyncSes
         days_count=days_count,
         trend_summary=trend,
         recent_history=history,
-        persona_override=user.coach_persona or "",
+        persona_override=persona_text,
     )
 
     trigger_context = {

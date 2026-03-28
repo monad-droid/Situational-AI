@@ -7,10 +7,43 @@ struct SettingsView: View {
     @State private var quietHoursEnabled = true
     @State private var quietStart = DateComponents(hour: 22, minute: 0)
     @State private var quietEnd = DateComponents(hour: 7, minute: 0)
+    @State private var personas: [CoachPersona] = []
+    @State private var selectedPersonaId: String = "tough_love"
 
     var body: some View {
         NavigationStack {
             List {
+                Section("Coach Persona") {
+                    ForEach(personas) { persona in
+                        Button {
+                            selectedPersonaId = persona.id
+                            Task { await selectPersona(persona.id) }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(persona.name)
+                                        .font(.headline)
+                                        .foregroundColor(.primary)
+                                    Text(persona.description)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Text("\"\(persona.preview)\"")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                        .italic()
+                                        .padding(.top, 2)
+                                }
+                                Spacer()
+                                if selectedPersonaId == persona.id {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundColor(.red)
+                                }
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }
+
                 Section("Health Data") {
                     HStack {
                         Label("HealthKit", systemImage: "heart.fill")
@@ -48,7 +81,7 @@ struct SettingsView: View {
                             displayedComponents: .hourAndMinute
                         )
 
-                        Text("No push notifications during quiet hours. Queued nudges are delivered when quiet hours end — but only if you're still over threshold.")
+                        Text("No push notifications during quiet hours.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -77,6 +110,25 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            .task {
+                await loadPersonas()
+            }
+        }
+    }
+
+    func loadPersonas() async {
+        do {
+            personas = try await APIClient.shared.getCoachPersonas()
+        } catch {
+            print("Failed to load personas: \(error)")
+        }
+    }
+
+    func selectPersona(_ id: String) async {
+        do {
+            try await APIClient.shared.updateCoachPersona(id)
+        } catch {
+            print("Failed to update persona: \(error)")
         }
     }
 }

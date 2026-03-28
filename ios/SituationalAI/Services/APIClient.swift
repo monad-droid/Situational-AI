@@ -76,6 +76,18 @@ actor APIClient {
         return try await post("/api/chat", body: request)
     }
 
+    // MARK: - Coach Personas
+
+    func getCoachPersonas() async throws -> [CoachPersona] {
+        let response: CoachPersonasResponse = try await get("/api/coach-personas")
+        return response.personas
+    }
+
+    func updateCoachPersona(_ personaId: String) async throws {
+        let body = UserSettingsBody(coachPersona: personaId, timezone: nil, quietHours: nil)
+        let _: StatusResponse = try await post("/api/user/settings", body: body)
+    }
+
     // MARK: - Push Token
 
     func updatePushToken(_ token: String) async throws {
