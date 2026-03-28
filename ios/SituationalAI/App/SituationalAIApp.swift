@@ -3,18 +3,18 @@ import SwiftUI
 @main
 struct SituationalAIApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
-    @StateObject private var authManager = AuthManager()
-    @StateObject private var healthKitManager = HealthKitManager()
+    @State private var authManager = AuthManager()
+    @State private var healthKitManager = HealthKitManager()
 
     var body: some Scene {
         WindowGroup {
             if authManager.isAuthenticated {
                 MainTabView()
-                    .environmentObject(authManager)
-                    .environmentObject(healthKitManager)
+                    .environment(authManager)
+                    .environment(healthKitManager)
             } else {
                 OnboardingView()
-                    .environmentObject(authManager)
+                    .environment(authManager)
             }
         }
     }
@@ -46,7 +46,6 @@ class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDele
         }
     }
 
-    // Show notifications even when app is in foreground
     func userNotificationCenter(
         _ center: UNUserNotificationCenter,
         willPresent notification: UNNotification,

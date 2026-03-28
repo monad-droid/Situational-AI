@@ -2,7 +2,7 @@ import AuthenticationServices
 import SwiftUI
 
 struct OnboardingView: View {
-    @EnvironmentObject var authManager: AuthManager
+    @Environment(AuthManager.self) var authManager
 
     var body: some View {
         VStack(spacing: 40) {

@@ -2,17 +2,17 @@ import HealthKit
 import SwiftUI
 
 @MainActor
-class HealthKitManager: ObservableObject {
+@Observable
+class HealthKitManager {
     private let store = HKHealthStore()
     private var anchor: HKQueryAnchor?
 
-    @Published var latestWeight: Double?
-    @Published var isAuthorized = false
+    var latestWeight: Double?
+    var isAuthorized = false
 
     private let anchorKey = "healthkit_weight_anchor"
 
     init() {
-        // Restore persisted anchor
         if let data = UserDefaults.standard.data(forKey: anchorKey) {
             anchor = try? NSKeyedUnarchiver.unarchivedObject(ofClass: HKQueryAnchor.self, from: data)
         }
@@ -38,9 +38,6 @@ class HealthKitManager: ObservableObject {
 
     // MARK: - Background Delivery
 
-    /// Register for background delivery — iOS wakes the app when new samples arrive.
-    /// IMPORTANT: Background delivery is throttled by iOS. For bodyMass, expect
-    /// hourly wake-ups at best. Do NOT promise real-time notifications.
     func startBackgroundDelivery() {
         let weightType = HKQuantityType(.bodyMass)
 
@@ -50,7 +47,6 @@ class HealthKitManager: ObservableObject {
             }
         }
 
-        // Set up observer query — triggers on new data
         let observerQuery = HKObserverQuery(sampleType: weightType, predicate: nil) { [weak self] _, completionHandler, error in
             guard error == nil else {
                 completionHandler()
@@ -59,7 +55,6 @@ class HealthKitManager: ObservableObject {
 
             Task {
                 await self?.fetchNewSamples()
-                // CRITICAL: Always call the completion handler or iOS won't deliver future updates
                 completionHandler()
             }
         }
@@ -69,8 +64,6 @@ class HealthKitManager: ObservableObject {
 
     // MARK: - Anchored Object Query
 
-    /// Fetch only NEW samples since the last sync using an anchor.
-    /// This handles edits, deletions, and avoids reprocessing old data.
     func fetchNewSamples() async {
         let weightType = HKQuantityType(.bodyMass)
 
@@ -88,7 +81,6 @@ class HealthKitManager: ObservableObject {
 
                 if let newAnchor = newAnchor {
                     self.anchor = newAnchor
-                    // Persist anchor
                     if let data = try? NSKeyedArchiver.archivedData(withRootObject: newAnchor, requiringSecureCoding: true) {
                         UserDefaults.standard.set(data, forKey: self.anchorKey)
                     }
@@ -99,7 +91,6 @@ class HealthKitManager: ObservableObject {
                     return
                 }
 
-                // Convert to API format and send to backend
                 let sampleInputs = samples.map { sample in
                     SampleInput(
                         metricType: "bodyMass",
@@ -110,14 +101,12 @@ class HealthKitManager: ObservableObject {
                     )
                 }
 
-                // Update latest weight for UI
                 if let latest = samples.sorted(by: { $0.endDate > $1.endDate }).first {
                     Task { @MainActor in
                         self.latestWeight = latest.quantity.doubleValue(for: .pound())
                     }
                 }
 
-                // Send to backend — backend handles dedup, threshold eval, nudges
                 Task {
                     do {
                         _ = try await APIClient.shared.sendSamples(sampleInputs)

@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject var authManager: AuthManager
-    @EnvironmentObject var healthKitManager: HealthKitManager
+    @Environment(AuthManager.self) var authManager
+    @Environment(HealthKitManager.self) var healthKitManager
 
     @State private var quietHoursEnabled = true
     @State private var quietStart = DateComponents(hour: 22, minute: 0)

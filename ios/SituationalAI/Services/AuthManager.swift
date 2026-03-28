@@ -2,9 +2,10 @@ import AuthenticationServices
 import SwiftUI
 
 @MainActor
-class AuthManager: ObservableObject {
-    @Published var isAuthenticated = false
-    @Published var userId: String?
+@Observable
+class AuthManager {
+    var isAuthenticated = false
+    var userId: String?
 
     private let tokenKey = "access_token"
     private let userIdKey = "user_id"

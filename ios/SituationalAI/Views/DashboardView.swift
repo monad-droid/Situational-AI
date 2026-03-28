@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct DashboardView: View {
-    @EnvironmentObject var healthKitManager: HealthKitManager
+    @Environment(HealthKitManager.self) var healthKitManager
     @State private var thresholds: [ThresholdResponse] = []
     @State private var showSetup = false
     @State private var targetWeight = ""
@@ -10,7 +10,6 @@ struct DashboardView: View {
         NavigationStack {
             ScrollView {
                 VStack(spacing: 24) {
-                    // Current weight card
                     if let weight = healthKitManager.latestWeight {
                         WeightCard(weight: weight, threshold: thresholds.first)
                     } else {
@@ -26,7 +25,6 @@ struct DashboardView: View {
                         }
                     }
 
-                    // Threshold setup
                     if thresholds.isEmpty {
                         SetupCard(
                             title: "Set Your Threshold",
