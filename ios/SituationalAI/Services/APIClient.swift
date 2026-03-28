@@ -29,18 +29,18 @@ actor APIClient {
     // MARK: - Auth
 
     func devLogin() async throws -> AuthResponse {
-        let response: AuthResponse = try await post("/api/auth/dev", body: [String: String](), authenticated: false)
+        let response: AuthResponse = try await post("/api/auth/dev", body: EmptyBody(), authenticated: false)
         self.accessToken = response.accessToken
         return response
     }
 
     func signInWithApple(identityToken: String, userIdentifier: String, email: String?, fullName: String?) async throws -> AuthResponse {
-        let body: [String: Any?] = [
-            "identity_token": identityToken,
-            "user_identifier": userIdentifier,
-            "email": email,
-            "full_name": fullName
-        ]
+        let body = AppleSignInBody(
+            identityToken: identityToken,
+            userIdentifier: userIdentifier,
+            email: email,
+            fullName: fullName
+        )
         let response: AuthResponse = try await post("/api/auth/apple", body: body, authenticated: false)
         self.accessToken = response.accessToken
         return response
@@ -72,14 +72,15 @@ actor APIClient {
     // MARK: - Chat
 
     func sendChatMessage(_ message: String, sessionId: String? = nil) async throws -> ChatResponseModel {
-        let request = ChatRequest(message: message, sessionId: sessionId)
+        let request = ChatRequestBody(message: message, sessionId: sessionId)
         return try await post("/api/chat", body: request)
     }
 
     // MARK: - Push Token
 
     func updatePushToken(_ token: String) async throws {
-        let _: [String: String] = try await post("/api/push-token", body: ["push_token": token])
+        let body = PushTokenBody(pushToken: token)
+        let _: StatusResponse = try await post("/api/push-token", body: body)
     }
 
     // MARK: - HTTP Helpers
@@ -94,17 +95,13 @@ actor APIClient {
         return try decoder.decode(T.self, from: data)
     }
 
-    private func post<T: Decodable>(_ path: String, body: Any, authenticated: Bool = true) async throws -> T {
+    private func post<B: Encodable, T: Decodable>(_ path: String, body: B, authenticated: Bool = true) async throws -> T {
         var request = URLRequest(url: URL(string: baseURL + path)!)
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         if authenticated { addAuth(&request) }
 
-        if let encodable = body as? Encodable {
-            request.httpBody = try encoder.encode(AnyEncodable(encodable))
-        } else if let dict = body as? [String: Any?] {
-            request.httpBody = try JSONSerialization.data(withJSONObject: dict.compactMapValues { $0 })
-        }
+        request.httpBody = try encoder.encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
         try validateResponse(response)
@@ -128,6 +125,27 @@ actor APIClient {
     }
 }
 
+// MARK: - Request Body Types
+
+private struct EmptyBody: Encodable {}
+private struct StatusResponse: Decodable { let status: String }
+private struct PushTokenBody: Encodable {
+    let pushToken: String
+    enum CodingKeys: String, CodingKey { case pushToken = "push_token" }
+}
+private struct AppleSignInBody: Encodable {
+    let identityToken: String
+    let userIdentifier: String
+    let email: String?
+    let fullName: String?
+    enum CodingKeys: String, CodingKey {
+        case identityToken = "identity_token"
+        case userIdentifier = "user_identifier"
+        case email
+        case fullName = "full_name"
+    }
+}
+
 enum APIError: LocalizedError {
     case httpError(Int)
     case rateLimited
@@ -137,18 +155,5 @@ enum APIError: LocalizedError {
         case .httpError(let code): return "Server error (\(code))"
         case .rateLimited: return "Daily chat limit reached. Try again tomorrow."
         }
-    }
-}
-
-// Type-erased Encodable wrapper
-private struct AnyEncodable: Encodable {
-    private let _encode: (Encoder) throws -> Void
-
-    init(_ wrapped: Encodable) {
-        self._encode = { encoder in try wrapped.encode(to: encoder) }
-    }
-
-    func encode(to encoder: Encoder) throws {
-        try _encode(encoder)
     }
 }

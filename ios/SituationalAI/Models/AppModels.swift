@@ -76,7 +76,7 @@ struct SamplesResponse: Codable {
     }
 }
 
-struct ChatRequest: Codable {
+struct ChatRequestBody: Codable {
     let message: String
     let sessionId: String?
 
