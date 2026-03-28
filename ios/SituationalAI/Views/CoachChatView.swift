@@ -36,8 +36,10 @@ struct CoachChatView: View {
                         .padding()
                     }
                     .onChange(of: messages.count) { _, _ in
-                        withAnimation {
-                            proxy.scrollTo(messages.last?.id ?? "loading", anchor: .bottom)
+                        if let lastId = messages.last?.id {
+                            withAnimation {
+                                proxy.scrollTo(lastId, anchor: .bottom)
+                            }
                         }
                     }
                 }
