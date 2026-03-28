@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     apns_topic: str = "com.cmdloop.situationalai"
     apns_use_sandbox: bool = True
 
+    # Dev mode — enables /api/auth/dev endpoint for local testing
+    dev_mode: bool = False
+
     # Coaching limits
     daily_chat_message_limit: int = 10
     min_nudge_interval_minutes: int = 180  # 3 hours between nudges per threshold

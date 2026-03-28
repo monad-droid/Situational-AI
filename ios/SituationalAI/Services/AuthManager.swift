@@ -58,8 +58,19 @@ class AuthManager {
 
     #if DEBUG
     func devLogin() {
-        self.userId = "dev-user"
-        self.isAuthenticated = true
+        Task {
+            do {
+                let response = try await APIClient.shared.devLogin()
+                UserDefaults.standard.set(response.accessToken, forKey: tokenKey)
+                UserDefaults.standard.set(response.userId, forKey: userIdKey)
+                self.userId = response.userId
+                self.isAuthenticated = true
+            } catch {
+                print("Dev login failed: \(error)")
+                self.userId = "dev-user"
+                self.isAuthenticated = true
+            }
+        }
     }
     #endif
 

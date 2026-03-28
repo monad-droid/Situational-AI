@@ -28,6 +28,12 @@ actor APIClient {
 
     // MARK: - Auth
 
+    func devLogin() async throws -> AuthResponse {
+        let response: AuthResponse = try await post("/api/auth/dev", body: [String: String](), authenticated: false)
+        self.accessToken = response.accessToken
+        return response
+    }
+
     func signInWithApple(identityToken: String, userIdentifier: String, email: String?, fullName: String?) async throws -> AuthResponse {
         let body: [String: Any?] = [
             "identity_token": identityToken,

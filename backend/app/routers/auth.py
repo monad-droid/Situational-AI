@@ -60,6 +60,31 @@ async def get_current_user(
     return user
 
 
+@router.post("/dev", response_model=AuthResponse)
+async def dev_login(db: AsyncSession = Depends(get_db)):
+    """Dev-only login — creates a test user and returns a token. Only works when DEV_MODE=true."""
+    if not settings.dev_mode:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    dev_apple_id = "dev-user-local"
+    result = await db.execute(select(User).where(User.apple_user_id == dev_apple_id))
+    user = result.scalar_one_or_none()
+
+    if user is None:
+        user = User(
+            apple_user_id=dev_apple_id,
+            email="dev@localhost",
+            name="Dev User",
+            subscription_tier="paid",
+        )
+        db.add(user)
+        await db.commit()
+        await db.refresh(user)
+
+    token = _create_access_token(str(user.id))
+    return AuthResponse(access_token=token, user_id=str(user.id))
+
+
 @router.post("/apple", response_model=AuthResponse)
 async def sign_in_with_apple(
     request: AppleSignInRequest,
