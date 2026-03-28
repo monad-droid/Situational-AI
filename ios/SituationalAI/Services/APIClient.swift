@@ -4,7 +4,8 @@ actor APIClient {
     static let shared = APIClient()
 
     #if DEBUG
-    private let baseURL = "http://localhost:8000"
+    // Use your Mac's local IP so both simulator and real iPhone can reach the backend
+    private let baseURL = "http://192.168.1.16:8000"
     #else
     private let baseURL = "https://api.situational-ai.app"
     #endif
