@@ -3,8 +3,11 @@ import Foundation
 actor APIClient {
     static let shared = APIClient()
 
-    // TODO: Replace with your Railway/Fly.io URL
+    #if DEBUG
+    private let baseURL = "http://localhost:8000"
+    #else
     private let baseURL = "https://api.situational-ai.app"
+    #endif
     private var accessToken: String?
 
     private let decoder: JSONDecoder = {

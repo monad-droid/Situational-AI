@@ -55,6 +55,13 @@ class AuthManager: ObservableObject {
         }
     }
 
+    #if DEBUG
+    func devLogin() {
+        self.userId = "dev-user"
+        self.isAuthenticated = true
+    }
+    #endif
+
     func signOut() {
         UserDefaults.standard.removeObject(forKey: tokenKey)
         UserDefaults.standard.removeObject(forKey: userIdKey)

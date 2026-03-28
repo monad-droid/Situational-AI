@@ -39,6 +39,17 @@ struct OnboardingView: View {
             .cornerRadius(12)
             .padding(.horizontal, 32)
 
+            #if DEBUG
+            Button {
+                authManager.devLogin()
+            } label: {
+                Text("Dev Login (skip auth)")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.top, 8)
+            #endif
+
             Text("No fluff. No excuses. Just results.")
                 .font(.caption)
                 .foregroundColor(.secondary)
